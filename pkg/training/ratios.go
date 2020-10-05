@@ -78,6 +78,10 @@ func previousActivationsToCostRatio(previousActivationToZRatio, zToActivationRat
 	return previousActivationToZRatio * zToActivationRatio * activationToCostRatio
 }
 
+func weightToActivationCostRatio(weightToZRatio, zToActivationRatio, activationToCostRatio float64) float64 {
+	return weightToZRatio * zToActivationRatio * activationToCostRatio
+}
+
 func weightsToActivationCostRatios(activationToCostRatio, zToActivationRatio float64, weights, inputs []float64) []float64 {
 	ratios := make([]float64, len(weights))
 	weightsToZRatios := weightsToZRatios(inputs)

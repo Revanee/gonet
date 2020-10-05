@@ -9,31 +9,42 @@ import (
 
 func main() {
 
-	l1 := gonet.NewRandomizedLayer(2, 2)
-	l2 := gonet.NewRandomizedLayer(2, 2)
-	l3 := gonet.NewRandomizedLayer(2, 2)
-	l4 := gonet.NewRandomizedLayer(2, 2)
-
-	network := gonet.NewNetwork(l1, l2, l3, l4)
+	network := gonet.NewNetwork(
+		gonet.NewRandomizedLayer(1, 1),
+		gonet.NewRandomizedLayer(1, 1),
+		// gonet.NewRandomizedLayer(1, 1),
+		// gonet.NewRandomizedLayer(1, 1),
+	)
 
 	trainingInputs := [][]float64{
-		{1, 0},
-		{0, 1},
-		{1, 1},
-		{0, 0},
+		{0},
+		{1},
+		{0},
+		{1},
+		{0},
+		{1},
+		{0},
+		{1},
 	}
 	trainingOutputs := [][]float64{
-		{0, 1},
-		{1, 0},
-		{0, 0},
-		{1, 1},
+		{1},
+		{0},
+		{1},
+		{0},
+		{1},
+		{0},
+		{1},
+		{0},
 	}
 
 	inputs := trainingInputs[0]
 	expectedOutputs := trainingOutputs[0]
 
+	actualOutputs, _ := gonet.ActivateNetwork(network, inputs...)
+	showResult(actualOutputs, expectedOutputs, inputs)
+
 	newNetwork := trainOnData(network, trainingInputs, trainingOutputs)
-	actualOutputs, _ := gonet.ActivateNetwork(newNetwork, inputs...)
+	actualOutputs, _ = gonet.ActivateNetwork(newNetwork, inputs...)
 
 	showResult(actualOutputs, expectedOutputs, inputs)
 }
@@ -41,20 +52,16 @@ func main() {
 func trainOnData(network gonet.Network, inputs, outputs [][]float64) gonet.Network {
 	newNetwork := network
 	for i := 0; i < 10000; i++ {
-		for j := range inputs {
-			newNetwork = train(newNetwork, inputs[j], outputs[j])
-		}
+		// for j := range inputs {
+		// 	newNetwork = train(newNetwork, inputs[j], outputs[j])
+		// }
+		newNetwork = training.TrainNetworkBatch(newNetwork, inputs, outputs)
 	}
 	return newNetwork
 }
 
 func train(network gonet.Network, inputs, expectedOutputs []float64) gonet.Network {
-	newNetwork := network
-	n, err := training.TrainNetwork(newNetwork, inputs, expectedOutputs)
-	newNetwork = n
-	if err != nil {
-		panic(err)
-	}
+	newNetwork := training.TrainNetworkSingle(network, inputs, expectedOutputs)
 	return newNetwork
 }
 
