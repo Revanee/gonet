@@ -42,9 +42,9 @@ func getNeuronGradient(weights []float64, bias, cost float64, inputs []float64) 
 	}
 
 	weigthsGradients := make([]float64, len(weights))
+	weightToZGradients := weightsToZRatios(inputs)
 	for i := range weigthsGradients {
-		weightToZGradient := previousActivationToZRatio(weights[i])
-		weigthsGradients[i] = getWeightGradient(weightToZGradient, zToActivationGradient, cost)
+		weigthsGradients[i] = getWeightGradient(weightToZGradients[i], zToActivationGradient, cost)
 	}
 	biasGradient := getBiasGradient(biasToZGradient, zToActivationGradient, cost)
 	return neuronGradient{
@@ -69,15 +69,25 @@ func getNetworkGradient(network gonet.Network, inputs, expectedOutput []float64)
 	layers := network.GetLayers()
 
 	layerOutputs, _ := getLayerOutputs(network, inputs)
-	layeredInputs := append([][]float64{inputs}, layerOutputs...)
+	layerInputs := append([][]float64{inputs}, layerOutputs...)
 
 	layerGradients := make([]layerGradient, len(layers))
-	for i, layer := range layers {
-		neuronCosts := make([]float64, len(layer.GetNeurons()))
-		for n := range neuronCosts {
-			neuronCosts[n] = activationToCostRatio(layeredInputs[i+1][n], expectedOutput[n])
+	layersActivationCosts := make([][]float64, len(layers))
+	for l := len(layers) - 1; l >= 0; l-- {
+		neurons := layers[l].GetNeurons()
+
+		layersActivationCosts[l] = make([]float64, len(neurons))
+		if l == len(layers)-1 {
+			for n := range neurons {
+				layersActivationCosts[l][n] = activationToCostRatio(layerOutputs[l][n], expectedOutput[n])
+			}
+		} else {
+			expectedOutputGradients := addNeuronGradients(layerGradients[l+1].neuronGradients...).inputsGradients
+			for n := range neurons {
+				layersActivationCosts[l][n] = expectedOutputGradients[n]
+			}
 		}
-		layerGradients[i] = getLayerGradient(layer, neuronCosts, layeredInputs[i])
+		layerGradients[l] = getLayerGradient(layers[l], layersActivationCosts[l], layerInputs[l])
 	}
 	return networkGradient{
 		layerGradients: layerGradients,
@@ -102,16 +112,21 @@ func getLayerOutputs(network gonet.Network, inputs []float64) ([][]float64, erro
 func addNeuronGradients(gradients ...neuronGradient) neuronGradient {
 	biasSum := 0.0
 	weightsSum := make([]float64, len(gradients[0].weightsGradients))
+	inputsSum := make([]float64, len(gradients[0].inputsGradients))
 
 	for _, gradient := range gradients {
 		biasSum += gradient.biasGradient
 		for i, weight := range gradient.weightsGradients {
 			weightsSum[i] += weight
 		}
+		for i, input := range gradient.inputsGradients {
+			inputsSum[i] += input
+		}
 	}
 	return neuronGradient{
 		biasGradient:     biasSum,
 		weightsGradients: weightsSum,
+		inputsGradients:  inputsSum,
 	}
 }
 
