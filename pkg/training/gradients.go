@@ -97,7 +97,7 @@ func getNetworkGradient(network gonet.Network, input, expectedOutput []float64) 
 				z := gonet.WeightedSumAndBias(neurons[n].GetWeigths(), neurons[n].GetBias(), layerInputs[l])
 				zToActivationRatio := zToActivationRatio(z)
 				previousActivationToZRatio := previousActivationToZRatio(neurons[n].GetWeigths()[i])
-				inputGradientSum += previousActivationToCostRatio(previousActivationToZRatio, zToActivationRatio, layerOutputGradients[l][i])
+				inputGradientSum += previousActivationToCostRatio(previousActivationToZRatio, zToActivationRatio, layerOutputGradients[l][n])
 			}
 
 			inputGradientAvg := inputGradientSum / float64(len(neurons))
@@ -154,13 +154,19 @@ func addNeuronGradients(gradients ...neuronGradient) neuronGradient {
 
 func addLayerGradients(layerGradients ...layerGradient) layerGradient {
 	neuronGradients := make([][]neuronGradient, len(layerGradients))
+
 	for i := range neuronGradients {
 		neuronGradients[i] = layerGradients[i].neuronGradients
 	}
-	summedNeuronGradients := make([]neuronGradient, len(layerGradients[0].neuronGradients))
-	for i := range summedNeuronGradients {
-		summedNeuronGradients[i] = addNeuronGradients(layerGradients[i].neuronGradients...)
+
+	summedNeuronGradients := make([]neuronGradient, len(neuronGradients[0]))
+	copy(summedNeuronGradients, neuronGradients[0])
+	for i := 1; i < len(neuronGradients); i++ {
+		for g := range summedNeuronGradients {
+			summedNeuronGradients[g] = addNeuronGradients(summedNeuronGradients[g], neuronGradients[i][g])
+		}
 	}
+
 	return layerGradient{
 		neuronGradients: summedNeuronGradients,
 	}
@@ -173,7 +179,8 @@ func addNetworkGradients(networkGradients ...networkGradient) networkGradient {
 		layerGradients[i] = networkGradients[i].layerGradients
 	}
 
-	summedLayerGradients := layerGradients[0]
+	summedLayerGradients := make([]layerGradient, len(layerGradients[0]))
+	copy(summedLayerGradients, layerGradients[0])
 	for i := 1; i < len(layerGradients); i++ {
 		for g := range summedLayerGradients {
 			summedLayerGradients[g] = addLayerGradients(summedLayerGradients[g], layerGradients[i][g])
