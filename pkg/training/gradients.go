@@ -102,7 +102,7 @@ func getNetworkGradient(network gonet.Network, input, expectedOutput []float64) 
 
 			inputGradientAvg := inputGradientSum / float64(len(neurons))
 
-			inputGradient := activationToCostRatio(layerOutputs[l-1][i], layerOutputs[l-1][i]-inputGradientAvg)
+			inputGradient := activationToCostRatio(layerOutputs[l-1][i], layerInputs[l][i]-inputGradientAvg)
 
 			layerOutputGradients[l-1][i] = inputGradient
 			continue
@@ -173,27 +173,14 @@ func addNetworkGradients(networkGradients ...networkGradient) networkGradient {
 		layerGradients[i] = networkGradients[i].layerGradients
 	}
 
-	summedLayerGradients := make([]layerGradient, len(networkGradients[0].layerGradients))
-	for i := range summedLayerGradients {
-		summedLayerGradients[i] = addLayerGradients(layerGradients[i]...)
+	summedLayerGradients := layerGradients[0]
+	for i := 1; i < len(layerGradients); i++ {
+		for g := range summedLayerGradients {
+			summedLayerGradients[g] = addLayerGradients(summedLayerGradients[g], layerGradients[i][g])
+		}
 	}
 
 	return networkGradient{
 		layerGradients: summedLayerGradients,
 	}
 }
-
-// func avgInputToZRatio(neurons ...gonet.Neuron) []float64 {
-// 	numWeights := len(neurons[0].GetWeigths())
-// 	total := make([]float64, numWeights)
-// 	average := make([]float64, numWeights)
-// 	for _, neuron := range neurons {
-// 		for w, weight := range neuron.GetWeigths() {
-// 			total[w] += previousActivationToZRatio(weight)
-// 		}
-// 	}
-// 	for a := range average {
-// 		average[a] = total[a] / float64(numWeights)
-// 	}
-// 	return average
-// }
