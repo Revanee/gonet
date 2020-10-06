@@ -17,7 +17,6 @@ func main() {
 	)
 
 	trainingInputs := [][]float64{
-		{0},
 		{1},
 		{0},
 		{1},
@@ -25,9 +24,9 @@ func main() {
 		{1},
 		{0},
 		{1},
+		{0},
 	}
 	trainingOutputs := [][]float64{
-		{1},
 		{0},
 		{1},
 		{0},
@@ -35,6 +34,7 @@ func main() {
 		{0},
 		{1},
 		{0},
+		{1},
 	}
 
 	inputs := trainingInputs[0]
@@ -51,7 +51,7 @@ func main() {
 
 func trainOnData(network gonet.Network, inputs, outputs [][]float64) gonet.Network {
 	newNetwork := network
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1000; i++ {
 		// for j := range inputs {
 		// 	newNetwork = train(newNetwork, inputs[j], outputs[j])
 		// }

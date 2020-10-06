@@ -74,7 +74,7 @@ func previousActivationsToZsRatios(previousActivations []float64, weights [][]fl
 	return ratios
 }
 
-func previousActivationsToCostRatio(previousActivationToZRatio, zToActivationRatio, activationToCostRatio float64) float64 {
+func previousActivationToCostRatio(previousActivationToZRatio, zToActivationRatio, activationToCostRatio float64) float64 {
 	return previousActivationToZRatio * zToActivationRatio * activationToCostRatio
 }
 
