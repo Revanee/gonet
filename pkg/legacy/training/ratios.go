@@ -1,6 +1,6 @@
 package training
 
-import gonet "github.com/Revanee/gonet/pkg"
+import gonet "github.com/Revanee/gonet/pkg/legacy"
 
 func activationToCostRatio(activation, desired float64) float64 {
 	return 2 * (activation - desired)
@@ -35,7 +35,7 @@ func weightsToZRatios(previousActivations []float64) []float64 {
 }
 
 func weightsToZsRatios(previousActivations []float64, weigths [][]float64) [][]float64 {
-	ratios := make([][]float64, len(weigths), len(previousActivations))
+	ratios := make([][]float64, len(weigths))
 	for i := range ratios {
 		ratios[i] = weightsToZRatios(previousActivations)
 	}

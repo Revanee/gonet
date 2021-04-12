@@ -1,6 +1,6 @@
 package training
 
-import gonet "github.com/Revanee/gonet/pkg"
+import gonet "github.com/Revanee/gonet/pkg/legacy"
 
 func TrainNetworkSingle(network gonet.Network, input, expectedOutput []float64) gonet.Network {
 	networkGradient := getNetworkGradient(network, input, expectedOutput)

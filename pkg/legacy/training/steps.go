@@ -1,14 +1,15 @@
 package training
 
-import gonet "github.com/Revanee/gonet/pkg"
+import gonet "github.com/Revanee/gonet/pkg/legacy"
 
 func stepNeuron(neuron gonet.Neuron, neuronGradient neuronGradient) gonet.Neuron {
+	stepSize := .3
 	weights := neuron.GetWeigths()
 	newWeights := make([]float64, len(weights))
 	for i := range newWeights {
-		newWeights[i] = weights[i] - neuronGradient.weightsGradients[i]
+		newWeights[i] = weights[i] - neuronGradient.weightsGradients[i]*stepSize
 	}
-	newBias := neuron.GetBias() - neuronGradient.biasGradient
+	newBias := neuron.GetBias() - neuronGradient.biasGradient*stepSize
 	return gonet.NewNeuron(newBias, newWeights...)
 }
 

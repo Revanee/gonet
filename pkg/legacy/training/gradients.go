@@ -1,7 +1,8 @@
 package training
 
 import (
-	gonet "github.com/Revanee/gonet/pkg"
+	gonet "github.com/Revanee/gonet/pkg/legacy"
+	"github.com/Revanee/gonet/pkg/legacy/backprop"
 	"github.com/pkg/errors"
 )
 
@@ -23,96 +24,73 @@ func getInputGradient(inputToZGradient, zToActivationGradient, activationToCostG
 	return inputToZGradient * zToActivationGradient * activationToCostGradient
 }
 
-func getBiasGradient(biasToZGradient, zToActivationGradient, activationToCostGradient float64) float64 {
+func getBiasRatio(biasToZGradient, zToActivationGradient, activationToCostGradient float64) float64 {
 	return biasToZGradient * zToActivationGradient * activationToCostGradient
 }
 
-func getWeightGradient(weightToZGradient, zToActivationGradient, activationToCostGradient float64) float64 {
+func getWeightRatio(weightToZGradient, zToActivationGradient, activationToCostGradient float64) float64 {
 	return weightToActivationCostRatio(weightToZGradient, zToActivationGradient, activationToCostGradient)
 }
 
-func getNeuronGradient(weights []float64, bias, activationToCostGradients float64, inputs []float64) neuronGradient {
-	biasToZGradient := biasToZRatio()
-	zToActivationGradient := zToActivationRatio(gonet.WeightedSumAndBias(weights, bias, inputs))
+func getNeuronGradient(weights []float64, bias, activationToCostRatio, cost float64, inputs []float64) neuronGradient {
+	biasToZRatio := biasToZRatio()
+	zToActivationRatio := zToActivationRatio(gonet.WeightedSumAndBias(weights, bias, inputs))
 
-	inputsGradients := make([]float64, len(inputs))
-	for i := range inputsGradients {
+	inputsRatios := make([]float64, len(inputs))
+	for i := range inputsRatios {
 		inputToZGradient := previousActivationToZRatio(weights[i])
-		inputsGradients[i] = getInputGradient(inputToZGradient, zToActivationGradient, activationToCostGradients)
+		inputsRatios[i] = getInputGradient(inputToZGradient, zToActivationRatio, activationToCostRatio)
 	}
 
-	weigthsGradients := make([]float64, len(weights))
+	weigthsRatios := make([]float64, len(weights))
 	weightToZGradients := weightsToZRatios(inputs)
-	for i := range weigthsGradients {
-		weigthsGradients[i] = getWeightGradient(weightToZGradients[i], zToActivationGradient, activationToCostGradients)
+	for i := range weigthsRatios {
+		weigthsRatios[i] = getWeightRatio(weightToZGradients[i], zToActivationRatio, activationToCostRatio)
 	}
-	biasGradient := getBiasGradient(biasToZGradient, zToActivationGradient, activationToCostGradients)
+	biasRatio := getBiasRatio(biasToZRatio, zToActivationRatio, activationToCostRatio)
 	return neuronGradient{
-		biasGradient:     biasGradient,
-		inputsGradients:  inputsGradients,
-		weightsGradients: weigthsGradients,
+		biasGradient:     biasRatio,
+		inputsGradients:  inputsRatios,
+		weightsGradients: weigthsRatios,
 	}
 }
 
-func getLayerFullGradient(layer gonet.Layer, activationToCostGradients, inputs []float64) layerGradient {
-	neurons := layer.GetNeurons()
-	neuronGradients := make([]neuronGradient, len(neurons))
-	for i, neuron := range neurons {
-		neuronGradients[i] = getNeuronGradient(neuron.GetWeigths(), neuron.GetBias(), activationToCostGradients[i], inputs)
-	}
-	return layerGradient{
-		neuronGradients: neuronGradients,
-	}
-}
-
-func getNetworkGradient(network gonet.Network, input, expectedOutput []float64) networkGradient {
+func getNetworkGradient(network gonet.Network, input, expectedNetworkOutput []float64) networkGradient {
 	layers := network.GetLayers()
 
 	layerOutputs, _ := getLayerOutputs(network, input)
 	layerInputs := append([][]float64{input}, layerOutputs...)[:len(layerOutputs)]
 
-	layerOutputGradients := make([][]float64, len(layers))
-	layerFullGradients := make([]layerGradient, len(layers))
+	weights := make([][][]float64, len(layers))
+	biases := make([][]float64, len(layers))
+	for l := range layers {
+		neurons := layers[l].GetNeurons()
+		weights[l] = make([][]float64, len(neurons))
+		biases[l] = make([]float64, len(neurons))
+		for n := range neurons {
+			weights[l][n] = neurons[n].GetWeigths()
+			biases[l][n] = neurons[n].GetBias()
+		}
+	}
 
-	for l := len(layers) - 1; l >= 0; l-- {
-		if l == len(layers)-1 {
-			layerOutputGradients[l] = make([]float64, len(layerOutputs[l]))
-			for o := range layerOutputs[l] {
-				outputGradient := activationToCostRatio(layerOutputs[l][o], expectedOutput[o])
-				layerOutputGradients[l][o] = outputGradient
+	weigthsGradient, biasGradient := backprop.NetworkGradient(layerOutputs[len(layers)-1], expectedNetworkOutput, weights, biases, layerInputs)
+
+	layerGradients := make([]layerGradient, len(layers))
+	for l := range layers {
+		neuronGradients := make([]neuronGradient, len(layers[l].GetNeurons()))
+		for n := range neuronGradients {
+			neuronGradients[n] = neuronGradient{
+				biasGradient:     biasGradient[l][n],
+				weightsGradients: weigthsGradient[l][n],
 			}
 		}
-
-		if l != 0 {
-			layerOutputGradients[l-1] = make([]float64, len(layerInputs[l]))
+		layerGradients[l] = layerGradient{
+			neuronGradients: neuronGradients,
 		}
-		for i := range layerInputs[l] {
-			if l == 0 {
-				continue
-			}
-			neurons := layers[l].GetNeurons()
-
-			inputGradientSum := .0
-			for n := range neurons {
-				z := gonet.WeightedSumAndBias(neurons[n].GetWeigths(), neurons[n].GetBias(), layerInputs[l])
-				zToActivationRatio := zToActivationRatio(z)
-				previousActivationToZRatio := previousActivationToZRatio(neurons[n].GetWeigths()[i])
-				inputGradientSum += previousActivationToCostRatio(previousActivationToZRatio, zToActivationRatio, layerOutputGradients[l][n])
-			}
-
-			inputGradientAvg := inputGradientSum / float64(len(neurons))
-
-			inputGradient := activationToCostRatio(layerOutputs[l-1][i], layerInputs[l][i]-inputGradientAvg)
-
-			layerOutputGradients[l-1][i] = inputGradient
-			continue
-		}
-
-		layerFullGradients[l] = getLayerFullGradient(layers[l], layerOutputGradients[l], layerInputs[l])
 	}
 
 	return networkGradient{
-		layerGradients: layerFullGradients,
+		layerGradients: layerGradients,
 	}
 }
 
@@ -173,6 +151,7 @@ func addLayerGradients(layerGradients ...layerGradient) layerGradient {
 }
 
 func addNetworkGradients(networkGradients ...networkGradient) networkGradient {
+	numberOfNetworkGradients := float64(len(networkGradients))
 	layerGradients := make([][]layerGradient, len(networkGradients))
 
 	for i := range layerGradients {
@@ -184,6 +163,15 @@ func addNetworkGradients(networkGradients ...networkGradient) networkGradient {
 	for i := 1; i < len(layerGradients); i++ {
 		for g := range summedLayerGradients {
 			summedLayerGradients[g] = addLayerGradients(summedLayerGradients[g], layerGradients[i][g])
+		}
+	}
+
+	for l := 0; l < len(summedLayerGradients); l++ {
+		for n := range summedLayerGradients[l].neuronGradients {
+			summedLayerGradients[l].neuronGradients[n].biasGradient = summedLayerGradients[l].neuronGradients[n].biasGradient / numberOfNetworkGradients
+			for w := range summedLayerGradients[l].neuronGradients[n].weightsGradients {
+				summedLayerGradients[l].neuronGradients[n].weightsGradients[w] = summedLayerGradients[l].neuronGradients[n].weightsGradients[w] / numberOfNetworkGradients
+			}
 		}
 	}
 

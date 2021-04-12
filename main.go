@@ -2,68 +2,57 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
+	"os"
+	"runtime/pprof"
 
-	gonet "github.com/Revanee/gonet/pkg"
-	"github.com/Revanee/gonet/pkg/training"
+	"github.com/Revanee/gonet/pkg/gonet/network"
+	"github.com/Revanee/gonet/pkg/gonet/training"
 )
 
 func main() {
+	f, err := os.Create("p.pprof")
+	if err != nil {
+		fmt.Println(err)
+	}
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
 
-	network := gonet.NewNetwork(
-		gonet.NewRandomizedLayer(1, 1),
-		gonet.NewRandomizedLayer(1, 1),
-		// gonet.NewRandomizedLayer(1, 1),
-		// gonet.NewRandomizedLayer(1, 1),
+	network := network.NewNetwork(
+		network.NewRandomizedLayer(1, 5),
+		network.NewRandomizedLayer(5, 5),
+		network.NewRandomizedLayer(5, 1),
 	)
 
-	trainingInputs := [][]float64{
-		{1},
-		{0},
-		{1},
-		{0},
-		{1},
-		{0},
-		{1},
-		{0},
+	trainingInputs := make([][]float64, 100)
+	for i := range trainingInputs {
+		trainingInputs[i] = []float64{rand.Float64()}
 	}
-	trainingOutputs := [][]float64{
-		{0},
-		{1},
-		{0},
-		{1},
-		{0},
-		{1},
-		{0},
-		{1},
-	}
-
-	inputs := trainingInputs[0]
-	expectedOutputs := trainingOutputs[0]
-
-	actualOutputs, _ := gonet.ActivateNetwork(network, inputs...)
-	showResult(actualOutputs, expectedOutputs, inputs)
+	trainingOutputs := generateTrainingOutputs(trainingInputs)
 
 	newNetwork := trainOnData(network, trainingInputs, trainingOutputs)
-	actualOutputs, _ = gonet.ActivateNetwork(newNetwork, inputs...)
 
-	showResult(actualOutputs, expectedOutputs, inputs)
+	testInputs := []float64{0}
+	networkActivations, _ := newNetwork.Activate(testInputs...)
+	showResult(networkActivations, generateTrainingOutput(testInputs), testInputs)
+	fmt.Println("---")
+	testInputs = []float64{1}
+	networkActivations, _ = newNetwork.Activate(testInputs...)
+	showResult(networkActivations, generateTrainingOutput(testInputs), testInputs)
 }
 
-func trainOnData(network gonet.Network, inputs, outputs [][]float64) gonet.Network {
+func trainOnData(network network.Network, inputs, outputs [][]float64) network.Network {
 	newNetwork := network
 	for i := 0; i < 1000; i++ {
-		// for j := range inputs {
-		// 	newNetwork = train(newNetwork, inputs[j], outputs[j])
-		// }
-		newNetwork = training.TrainNetworkBatch(newNetwork, inputs, outputs)
+		newNetwork = training.BackPropNetworkBatch(newNetwork, inputs, outputs)
 	}
 	return newNetwork
 }
 
-func train(network gonet.Network, inputs, expectedOutputs []float64) gonet.Network {
-	newNetwork := training.TrainNetworkSingle(network, inputs, expectedOutputs)
-	return newNetwork
-}
+// func train(network network.Network, inputs, expectedOutputs []float64) network.Network {
+// 	newNetwork := training.TrainNetworkSingle(network, inputs, expectedOutputs)
+// 	return newNetwork
+// }
 
 func showResult(outputs, expectedOutputs, inputs []float64) {
 	fmt.Printf("Inputs:\t\t%s\n", printTabbed(inputs...))
@@ -78,4 +67,20 @@ func printTabbed(numbers ...float64) string {
 		result += fmt.Sprintf("%f\t", number)
 	}
 	return result
+}
+
+func generateTrainingOutputs(trainingInputs [][]float64) [][]float64 {
+	trainingOutputs := make([][]float64, len(trainingInputs))
+	for i := range trainingOutputs {
+		trainingOutputs[i] = generateTrainingOutput(trainingInputs[i])
+	}
+	return trainingOutputs
+}
+
+func generateTrainingOutput(inputs []float64) []float64 {
+	output := make([]float64, len(inputs))
+	for i := range inputs {
+		output[i] = 1 - inputs[i]
+	}
+	return output
 }
