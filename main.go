@@ -19,24 +19,35 @@ func main() {
 	defer pprof.StopCPUProfile()
 
 	network := network.NewNetwork(
-		network.NewRandomizedLayer(1, 5),
-		network.NewRandomizedLayer(5, 5),
-		network.NewRandomizedLayer(5, 1),
+		// network.NewRandomizedLayer(2, 2),
+		// network.NewRandomizedLayer(2, 2),
+		// network.NewRandomizedLayer(2, 2),
+		// network.NewRandomizedLayer(2, 2),
+		// network.NewRandomizedLayer(2, 2),
+		network.NewRandomizedLayer(2, 6),
+		// network.NewRandomizedLayer(10, 10),
+		network.NewRandomizedLayer(6, 6),
+		network.NewRandomizedLayer(6, 6),
+		network.NewRandomizedLayer(6, 2),
 	)
 
-	trainingInputs := make([][]float64, 100)
+	trainingInputs := make([][]float64, 1000)
 	for i := range trainingInputs {
-		trainingInputs[i] = []float64{rand.Float64()}
+		trainingInputs[i] = []float64{rand.Float64(), rand.Float64()}
 	}
 	trainingOutputs := generateTrainingOutputs(trainingInputs)
 
 	newNetwork := trainOnData(network, trainingInputs, trainingOutputs)
 
-	testInputs := []float64{0}
+	testInputs := []float64{0, 1}
 	networkActivations, _ := newNetwork.Activate(testInputs...)
 	showResult(networkActivations, generateTrainingOutput(testInputs), testInputs)
 	fmt.Println("---")
-	testInputs = []float64{1}
+	testInputs = []float64{1, 0}
+	networkActivations, _ = newNetwork.Activate(testInputs...)
+	showResult(networkActivations, generateTrainingOutput(testInputs), testInputs)
+	fmt.Println("---")
+	testInputs = []float64{.5, .5}
 	networkActivations, _ = newNetwork.Activate(testInputs...)
 	showResult(networkActivations, generateTrainingOutput(testInputs), testInputs)
 }
@@ -44,6 +55,21 @@ func main() {
 func trainOnData(network network.Network, inputs, outputs [][]float64) network.Network {
 	newNetwork := network
 	for i := 0; i < 1000; i++ {
+		if i%10 == 0 {
+			fmt.Println("-------")
+			fmt.Println(i/10, "%")
+			testInputs := []float64{0, 1}
+			networkActivations, _ := newNetwork.Activate(testInputs...)
+			showResult(networkActivations, generateTrainingOutput(testInputs), testInputs)
+			fmt.Println("---")
+			testInputs = []float64{1, 0}
+			networkActivations, _ = newNetwork.Activate(testInputs...)
+			showResult(networkActivations, generateTrainingOutput(testInputs), testInputs)
+			fmt.Println("---")
+			testInputs = []float64{.5, .5}
+			networkActivations, _ = newNetwork.Activate(testInputs...)
+			showResult(networkActivations, generateTrainingOutput(testInputs), testInputs)
+		}
 		newNetwork = training.BackPropNetworkBatch(newNetwork, inputs, outputs)
 	}
 	return newNetwork
@@ -78,9 +104,6 @@ func generateTrainingOutputs(trainingInputs [][]float64) [][]float64 {
 }
 
 func generateTrainingOutput(inputs []float64) []float64 {
-	output := make([]float64, len(inputs))
-	for i := range inputs {
-		output[i] = 1 - inputs[i]
-	}
+	output := []float64{inputs[1], inputs[0]}
 	return output
 }

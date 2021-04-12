@@ -1,7 +1,7 @@
 package training
 
 func stepNeuron(weights []float64, bias float64, weightsGradient []float64, biasGradient float64) (newWeights []float64, newBias float64) {
-	stepSize := .1
+	stepSize := .03
 	newWeights = make([]float64, len(weights))
 	for w := range newWeights {
 		newWeights[w] = weights[w] - weightsGradient[w]*stepSize

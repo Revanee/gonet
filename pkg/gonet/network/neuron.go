@@ -63,7 +63,7 @@ func NewNeuron(bias float64, weigths ...float64) Neuron {
 func NewRandomizedNeuron(inputSize int) Neuron {
 	weigths := make([]float64, inputSize)
 	for i := range weigths {
-		weigths[i] = rand.Float64()
+		weigths[i] = rand.Float64()*2 - 1
 	}
-	return NewNeuron(rand.Float64(), weigths...)
+	return NewNeuron(rand.Float64()*2-1, weigths...)
 }

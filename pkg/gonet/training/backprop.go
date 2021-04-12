@@ -6,39 +6,29 @@ import (
 )
 
 func BackPropNetworkBatch(n network.Network, inputs, expected [][]float64) network.Network {
-	weightsGradientSum := make([][][]float64, len(n.GetLayers()))
-	biasesGradientSum := make([][]float64, len(n.GetLayers()))
+	newNetwork := n
 	for i := range inputs {
-		weightsGradient, biasesGradient := networkGradient(n, inputs[i], expected[i])
-		for l := range weightsGradient {
-			weightsGradientSum[l] = make([][]float64, len(weightsGradient[l]))
-			biasesGradientSum[l] = make([]float64, len(weightsGradient[l]))
-			for n := range weightsGradient[l] {
-				weightsGradientSum[l][n] = make([]float64, len(weightsGradient[l][n]))
-				for w := range weightsGradient[l][n] {
-					weightsGradientSum[l][n][w] += weightsGradient[l][n][w]
-				}
-				biasesGradientSum[l][n] += biasesGradient[l][n]
-			}
-		}
+		activations, _ := n.Activate(inputs[i]...)
+		cost := functions.ActivationsCostsAverage(activations, expected[i])
+		weightsRatio, biasesRatio := networkRatio(n, inputs[i], expected[i])
+		weightsGradient, biasesGradient := NetworkGradient(weightsRatio, biasesRatio, cost)
+		weights, biases := newNetwork.GetTensor()
+		newWeights, newBiases := stepNetwork(weights, biases, weightsGradient, biasesGradient)
+		newNetwork = network.NewNetworkFromTensor(newWeights, newBiases)
 	}
-	weights, biases := n.GetTensor()
-	newWeights, newBiases := stepNetwork(weights, biases, weightsGradientSum, biasesGradientSum)
-	return network.NewNetworkFromTensor(newWeights, newBiases)
+	return newNetwork
 }
 
-func networkGradient(n network.Network, inputs, expected []float64) (weightsGradient [][][]float64, biasesGradient [][]float64) {
+func networkRatio(n network.Network, inputs, expected []float64) (weightsRatio [][][]float64, biasesRatio [][]float64) {
 	activations, _ := n.Activate(inputs...)
-	cost := functions.ActivationsCostsSum(activations, expected)
+	internalActivations, _ := n.ActivateTransparent(inputs...)
 
 	activationsToCostsRatios := make([]float64, len(activations))
 	for a := range activationsToCostsRatios {
 		activationsToCostsRatios[a] = functions.ActivationToCostRatio(activations[a], expected[a])
 	}
 	weights, biases := n.GetTensor()
-	internalActivations, _ := n.ActivateTransparent(inputs...)
 	allInputs := append([][]float64{inputs}, internalActivations...)
-	weightsRatio, biasesRatio := NetworkRatio(activations, activationsToCostsRatios, weights, biases, allInputs)
-	weightsGradient, biasesGradient = NetworkGradient(weightsRatio, biasesRatio, cost)
-	return
+	weightsRatio, biasesRatio = NetworkRatio(activations, activationsToCostsRatios, weights, biases, allInputs)
+	return weightsRatio, biasesRatio
 }

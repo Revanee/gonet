@@ -41,6 +41,29 @@ func (l *layerData) Activate(values ...float64) ([]float64, error) {
 	return activations, nil
 }
 
+func (l *layerData) ActivateParallel(values ...float64) ([]float64, error) {
+	activations := make([]float64, len(l.GetNeurons()))
+	ch := make(chan []float64)
+	for i, n := range l.GetNeurons() {
+		var err error = nil
+		go activateNeuron(float64(i), values, n, ch)
+		if err != nil {
+			return nil, errors.Wrap(err, "One or more of the neurons in layer got mismatchign inputs and weigths")
+		}
+	}
+	for range l.GetNeurons() {
+		res := <-ch
+		activations[int(res[0])] = res[1]
+	}
+	close(ch)
+	return activations, nil
+}
+
+func activateNeuron(index float64, input []float64, neuron Neuron, ch chan []float64) {
+	res, _ := neuron.Activate(input...)
+	ch <- []float64{index, res}
+}
+
 func LayerWithNewWeigths(layer Layer, weigths ...[]float64) Layer {
 	neurons := layer.GetNeurons()
 	for i, neuron := range neurons {

@@ -6,10 +6,10 @@ func ActivationCost(activation, desired float64) float64 {
 	return math.Pow(activation-desired, 2)
 }
 
-func ActivationsCostsSum(activations, desired []float64) float64 {
-	cost := .0
+func ActivationsCostsAverage(activations, desired []float64) float64 {
+	costTotal := .0
 	for i := range activations {
-		cost += ActivationCost(activations[i], desired[i])
+		costTotal += ActivationCost(activations[i], desired[i])
 	}
-	return cost
+	return costTotal / float64(len(activations))
 }

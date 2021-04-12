@@ -12,11 +12,11 @@ func BiasRatio(z, activationToCostRatio float64) float64 {
 func WeightsRatio(z, activationToCostRatio float64, weigths, inputs []float64) []float64 {
 	zToActivationRatio := functions.ZToActivationRatio(z)
 	weightsToActivationCostRatios := functions.WeightsToActivationCostRatios(activationToCostRatio, zToActivationRatio, weigths, inputs)
-	gradients := make([]float64, len(weigths))
-	for i := range gradients {
-		gradients[i] = weightsToActivationCostRatios[i]
+	ratios := make([]float64, len(weigths))
+	for i := range ratios {
+		ratios[i] = weightsToActivationCostRatios[i]
 	}
-	return gradients
+	return ratios
 }
 
 func InputsRatio(z, activationToCostRatio float64, inputs, weights []float64) []float64 {
@@ -33,10 +33,10 @@ func InputsRatio(z, activationToCostRatio float64, inputs, weights []float64) []
 	return inputsGradient
 }
 
-func LayerRatio(inputs, activations, activationToCostRatios []float64, weigths [][]float64, biases []float64) (weigthsRatio, inputRatio [][]float64, biasRatio []float64) {
+func LayerRatio(inputs, activations, activationToCostRatios []float64, weigths [][]float64, biases []float64) (weigthsRatio, inputsRatio [][]float64, biasRatio []float64) {
 	biasRatio = make([]float64, len(biases))
 	weigthsRatio = make([][]float64, len(weigths))
-	inputsRatio := make([][]float64, len(weigths))
+	inputsRatio = make([][]float64, len(weigths))
 	for n := range activations {
 		weigthsRatio[n], inputsRatio[n], biasRatio[n] = NeuronRatio(activations[n], activationToCostRatios[n], biases[n], inputs, weigths[n])
 	}
@@ -44,7 +44,7 @@ func LayerRatio(inputs, activations, activationToCostRatios []float64, weigths [
 }
 
 func NeuronRatio(activation, activationToCostRatio, bias float64, inputs, weights []float64) (weigthsRatio, inputsRatio []float64, biasRatio float64) {
-	z := functions.LogisticCurveDerivative(activation)
+	z := functions.WeightedSumAndBias(inputs, weights, bias)
 	weigthsRatio = WeightsRatio(z, activationToCostRatio, weights, inputs)
 	inputsRatio = InputsRatio(z, activationToCostRatio, inputs, weights)
 	biasRatio = BiasRatio(z, activationToCostRatio)
